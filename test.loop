@@ -1,0 +1,22 @@
+task {
+    "Write something to src/main.rs"
+}
+state {
+    is_done: false,
+    last_tool_output: false
+}
+tools {
+    tool write_file(path: string, content: string) -> bool
+}
+invariant {
+    state.is_done == false
+}
+strategy {
+    "Run write_file to set content."
+}
+until {
+    state.last_tool_output == true
+}
+fallback {
+    "Report failure."
+}

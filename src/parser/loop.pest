@@ -1,0 +1,57 @@
+char = {
+    !("\"" | "\\") ~ ANY
+  | "\\" ~ ("\"" | "\\" | "/" | "b" | "f" | "n" | "r" | "t")
+  | "\\" ~ ("u" ~ ASCII_HEX_DIGIT{4})
+}
+string = ${ "\"" ~ inner_str ~ "\"" }
+inner_str = @{ char* }
+
+integer = @{ "-"? ~ ASCII_DIGIT+ }
+boolean = @{ "true" | "false" }
+
+ident = @{ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")* }
+
+// Expression Grammar
+expr = { primary ~ (bin_op ~ primary)* }
+primary = { boolean | integer | string | state_var | tool_call | "(" ~ expr ~ ")" }
+state_var = { "state." ~ ident }
+tool_call = { ident ~ "(" ~ (expr ~ ("," ~ expr)*)? ~ ")" }
+bin_op = { "==" | "!=" | "<=" | ">=" | "<" | ">" | "&&" | "||" }
+
+// Blocks
+task_block = { "task" ~ "{" ~ string ~ "}" }
+
+state_field = { ident ~ ":" ~ (string | integer | boolean) }
+state_block = { "state" ~ "{" ~ (state_field ~ ("," ~ state_field)* ~ ","?)? ~ "}" }
+
+tool_param = { ident ~ ":" ~ param_type }
+param_type = { "string" | "int" | "bool" }
+tool_decl = { "tool" ~ ident ~ "(" ~ (tool_param ~ ("," ~ tool_param)*)? ~ ")" ~ ("->" ~ param_type)? }
+tools_block = { "tools" ~ "{" ~ tool_decl* ~ "}" }
+
+invariant_block = { "invariant" ~ "{" ~ (expr ~ ("," ~ expr)* ~ ","?)? ~ "}" }
+
+strategy_block = { "strategy" ~ "{" ~ string ~ "}" }
+
+until_block = { "until" ~ "{" ~ expr ~ "}" }
+
+fallback_block = { "fallback" ~ "{" ~ string ~ "}" }
+
+block = {
+    task_block
+  | state_block
+  | tools_block
+  | invariant_block
+  | strategy_block
+  | until_block
+  | fallback_block
+}
+
+file = {
+    SOI ~
+    block* ~
+    EOI
+}
+
+WHITESPACE = _{ " " | "\t" | "\r" | "\n" }
+COMMENT = _{ "/*" ~ (!"*/" ~ ANY)* ~ "*/" | "//" ~ (!"\n" ~ ANY)* }
