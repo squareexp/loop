@@ -3,3 +3,4 @@
 **/*.rs.bk
 .loop_sandbox
 .loop/store
+*.vsix
