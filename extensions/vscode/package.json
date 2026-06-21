@@ -1,7 +1,7 @@
 {
-  "name": "vscode-loop",
-  "displayName": "Loop DSL Syntax Highlighting",
-  "description": "Syntax highlighting for the Loop DSL language",
+  "name": "loopagent",
+  "displayName": "LoopAgent",
+  "description": "Support Extension for loop agentic language",
   "version": "0.1.0",
   "publisher": "squareexp",
   "engines": {
