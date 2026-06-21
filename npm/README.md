@@ -1,4 +1,4 @@
-# @loopeng/loop
+# @squareexp/loop
 
 Command-line tool for the Loop Engineering Language. Write `.loop` files to give
 AI agents a structured contract instead of a chat prompt.
@@ -6,7 +6,7 @@ AI agents a structured contract instead of a chat prompt.
 ## Install
 
 ```sh
-npm install -g @loopeng/loop
+npm install -g @squareexp/loop
 ```
 
 This downloads a prebuilt binary for your platform. If no binary is available,
