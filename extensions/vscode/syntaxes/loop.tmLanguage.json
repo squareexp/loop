@@ -1,0 +1,109 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Loop",
+  "patterns": [
+    {
+      "include": "#comments"
+    },
+    {
+      "include": "#keywords"
+    },
+    {
+      "include": "#strings"
+    },
+    {
+      "include": "#numbers"
+    },
+    {
+      "include": "#types"
+    },
+    {
+      "include": "#state_variables"
+    },
+    {
+      "include": "#tool_declarations"
+    }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.double-slash.loop",
+          "match": "//.*$"
+        },
+        {
+          "name": "comment.block.loop",
+          "begin": "/\\*",
+          "end": "\\*/"
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.loop",
+          "match": "\\b(task|state|tools|invariant|strategy|until|fallback)\\b"
+        },
+        {
+          "name": "keyword.other.loop",
+          "match": "\\b(tool)\\b"
+        },
+        {
+          "name": "constant.language.boolean.loop",
+          "match": "\\b(true|false)\\b"
+        }
+      ]
+    },
+    "types": {
+      "patterns": [
+        {
+          "name": "support.type.loop",
+          "match": "\\b(string|int|bool)\\b"
+        }
+      ]
+    },
+    "strings": {
+      "name": "string.quoted.double.loop",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        {
+          "name": "constant.character.escape.loop",
+          "match": "\\\\."
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.integer.loop",
+          "match": "\\b[0-9]+\\b"
+        }
+      ]
+    },
+    "state_variables": {
+      "patterns": [
+        {
+          "name": "variable.other.member.loop",
+          "match": "\\bstate\\.[a-zA-Z_][a-zA-Z0-9_]*\\b"
+        }
+      ]
+    },
+    "tool_declarations": {
+      "patterns": [
+        {
+          "match": "\\b(tool)\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\b",
+          "captures": {
+            "1": {
+              "name": "keyword.other.loop"
+            },
+            "2": {
+              "name": "entity.name.function.loop"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "scopeName": "source.loop"
+}

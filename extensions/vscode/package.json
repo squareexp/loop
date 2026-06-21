@@ -1,0 +1,35 @@
+{
+  "name": "vscode-loop",
+  "displayName": "Loop DSL Syntax Highlighting",
+  "description": "Syntax highlighting for the Loop DSL language",
+  "version": "0.1.0",
+  "publisher": "squareexp",
+  "engines": {
+    "vscode": "^1.60.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "loop",
+        "aliases": [
+          "Loop",
+          "loop"
+        ],
+        "extensions": [
+          ".loop"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "loop",
+        "scopeName": "source.loop",
+        "path": "./syntaxes/loop.tmLanguage.json"
+      }
+    ]
+  }
+}
