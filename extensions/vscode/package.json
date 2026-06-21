@@ -4,10 +4,19 @@
   "description": "Syntax highlighting, completions, and snippets for .loop files — structured AI agent task specifications.",
   "version": "0.2.0",
   "publisher": "squareexp",
+  "license": "MIT",
   "icon": "brain.png",
+  "homepage": "https://github.com/squareexp/loop",
   "repository": {
     "type": "git",
     "url": "https://github.com/squareexp/loop"
+  },
+  "bugs": {
+    "url": "https://github.com/squareexp/loop/issues"
+  },
+  "galleryBanner": {
+    "color": "#1e1e2e",
+    "theme": "dark"
   },
   "keywords": ["loop", "ai", "agent", "dsl", "task", "engineering"],
   "engines": {

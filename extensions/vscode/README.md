@@ -1,13 +1,21 @@
 # Loop Engineering Language
 
-VS Code support for `.loop` files — syntax highlighting, completions, and snippets
-for the Loop Engineering Language.
+Write `.loop` files — structured task contracts that tell AI agents exactly what to build, what tools they can use, and how to confirm it worked.
 
-## What it does
+Unlike a chat prompt, a `.loop` file is a **compiler-checked specification**. Wrong brackets cause a syntax error. Missing required blocks are caught before the agent starts.
 
-`.loop` files are structured task specifications for AI agents. Instead of a long
-prompt in a chat window, you write a file that defines exactly what to build, what
-tools the agent can use, and how to confirm it worked.
+---
+
+## Features
+
+- **Syntax highlighting** — block keywords, tool declarations, field names, types, and return arrows all highlighted distinctly
+- **Snippets** — type `goal`, `task`, `loop`, etc. to expand full blocks with tab stops
+- **Bracket enforcement** — `Goal` uses `[ ]`, everything else uses `{ }`, wrong bracket = error
+- **File icon** — `.loop` files get their own icon in the Explorer
+
+---
+
+## Quick look
 
 ```loop
 Goal [
@@ -16,8 +24,7 @@ Goal [
 
 Task {
     "Create users table migration"
-    "Implement POST /auth/register"
-    "Implement POST /auth/login returning a JWT"
+    "Implement POST /auth/register and POST /auth/login"
     "Protect GET /api/tasks with auth middleware"
 }
 
@@ -31,7 +38,7 @@ Discovery {
 
 Planning {
     steps: [
-        "Run discovery — scan files and answer find questions"
+        "Run discovery"
         "Create database schema"
         "Implement auth endpoints"
         "Write integration tests"
@@ -59,179 +66,97 @@ Verification {
 }
 ```
 
+---
+
 ## The seven blocks
 
-| Block | Brackets | Required | Description |
+| Block | Brackets | Required | Purpose |
 |---|---|---|---|
-| `Goal` | `[ ]` | yes | What you want — plain language |
-| `Memory` | `{ }` | no | What the agent remembers across sessions |
+| `Goal` | `[ ]` | yes | What you want, in plain language |
+| `Memory` | `{ }` | no | State the agent carries between sessions |
 | `Task` | `{ }` | no | Specific implementation items |
-| `Discovery` | `{ }` | yes | What to find before writing code |
-| `Planning` | `{ }` | yes | Ordered steps + iteration budget |
-| `Execution` | `{ }` | yes | Available tools + strategy |
-| `Verification` | `{ }` | yes | Success criteria |
+| `Discovery` | `{ }` | yes | What to read and understand before writing anything |
+| `Planning` | `{ }` | yes | Ordered steps and iteration budget |
+| `Execution` | `{ }` | yes | Tools the agent can call and how to use them |
+| `Verification` | `{ }` | yes | Success criteria — what "done" actually means |
 
-**Bracket rules are strict.** `Goal` uses `[ ]`. Every other block uses `{ }`.
-Tool parameters use `( )`. Using the wrong bracket is a syntax error.
+---
 
-## Completions
+## Snippets
 
-Type the start of any block name to get a full snippet:
+Type the start of a block name and press Tab:
 
-| Type | Gets you |
+| Trigger | Expands to |
 |---|---|
-| `loop` | Complete file with all seven blocks |
-| `goal` | `Goal [ ... ]` |
-| `memory` | `Memory { ... }` |
-| `task` | `Task { ... }` |
-| `discovery` | `Discovery { ... }` |
-| `planning` | `Planning { ... }` |
-| `execution` | `Execution { ... }` |
-| `verification` | `Verification { ... }` |
-| `tool` | Tool declaration with type placeholders |
+| `loop` or `lf` | Complete file with all seven blocks |
+| `goal` or `go` | `Goal [ ... ]` |
+| `memory` or `me` | `Memory { ... }` |
+| `task` or `ta` | `Task { ... }` |
+| `discovery` or `di` | `Discovery { ... }` |
+| `planning` or `pl` | `Planning { ... }` |
+| `execution` or `ex` | `Execution { ... }` |
+| `verification` or `ve` | `Verification { ... }` |
+| `tool` | Tool declaration with typed parameters |
 
-Tab through the placeholders to fill in each field.
+Tab through each placeholder to fill in the details.
 
-## Syntax highlighting
+---
 
-- Block keywords in distinct colors (`Goal`, `Memory`, `Task`, etc.)
-- Goal content highlighted as an unquoted string
-- Tool declarations with function-style coloring
-- Field keywords (`scan`, `steps`, `tools`, `checks`, etc.)
-- `retry` / `complete` as language constants
-- Types (`string`, `int`, `bool`) in type color
-- `->` return type arrows
+## Bracket rules
+
+`Goal` is the only block that uses square brackets. Everything else uses curly braces. Tool parameters use parentheses. The compiler rejects wrong brackets with a clear message:
+
+```loop
+// Correct
+Goal [ describe the task here ]
+Memory { project_path: "./myapp" }
+Task { "do this" "then this" }
+
+// Syntax errors
+Goal { describe the task }   // ERROR: Goal requires [ ] not { }
+Task [ "item" ]              // ERROR: Task requires { } not [ ]
+Execution ( ... )            // ERROR: Execution requires { } not ( )
+```
+
+---
 
 ## CLI
 
-The extension pairs with the `loop` CLI:
+The extension pairs with the `loop` CLI for validation and execution:
 
 ```sh
-npm install -g @loopeng/loop   # install the CLI
-loop init                       # create .loop/skills, Memory/, Goal.loop
-loop check Goal.loop            # validate your file
-loop run Goal.loop              # run with an AI agent
-loop verify Goal.loop           # check verification conditions
-loop status                     # show current state
-loop inspect Goal.loop          # print the parsed AST
+npm install -g @squareexp/loop   # install
+
+loop init                         # create .loop/skills, Memory/, Goal.loop
+loop check Goal.loop              # validate the file — shows per-block status
+loop run Goal.loop                # run with an AI agent
+loop verify Goal.loop             # run verification checks
+loop status                       # show current state and failure history
+loop inspect Goal.loop            # print the parsed AST
 ```
 
-Install the CLI: [npmjs.com/package/@loopeng/loop](https://www.npmjs.com/package/@loopeng/loop)
+Install: [npmjs.com/package/@squareexp/loop](https://www.npmjs.com/package/@squareexp/loop)
 
-## Strict bracket rules (enforced by the compiler)
+---
 
-```loop
-// These are correct:
-Goal [ ... ]          // Goal uses [ ]
-Memory { ... }        // Memory uses { }
-Task { ... }          // Task uses { }
-Verification { ... }  // All other blocks use { }
+## How it works
 
-// These are syntax errors:
-Goal { ... }          // ERROR: expected '[' after 'Goal'
-Task [ ... ]          // ERROR: expected '{' after 'Task'
-Execution ( ... )     // ERROR: expected '{' after 'Execution'
-```
+1. Write a `.loop` file describing what you want built
+2. Run `loop init` — creates the workspace structure and drops a skill document that explains the language to the agent
+3. Give the `.loop` file to an AI agent (Claude, Gemini, GPT-4, etc.)
+4. The agent reads Discovery, runs Planning steps with the declared tools, and checks Verification after each iteration
+5. Run `loop verify Goal.loop` when you think it's done — if all checks pass, state is updated and the file is marked complete
 
-The compiler catches bracket mismatches and tells you exactly which block
-got the wrong bracket and what was expected.
+Every failed tool call and failed check is recorded in `.loop/state.json`. The agent reads this on each iteration and doesn't repeat the same mistakes.
 
-## Examples
-
-### Minimal file
-
-```loop
-Goal [ Fix the failing auth test ]
-
-Discovery { find: ["What does the test expect?"] }
-
-Planning { steps: ["Read the test" "Fix the implementation"] }
-
-Execution {
-    tools: [
-        read_file(path: string) -> string
-        write_file(path: string, content: string) -> bool
-    ]
-    strategy: "Read the test first, then fix the source."
-}
-
-Verification {
-    checks: ["cargo test auth passes"]
-    on_fail: retry
-    max_retries: 3
-}
-```
-
-### With memory and tasks
-
-```loop
-Goal [
-    Migrate the user auth system from sessions to JWT.
-    All existing tests must pass after the migration.
-]
-
-Memory {
-    project_path: "./myapp"
-    framework: "Express"
-    test_command: "npm test"
-    migration_started: false
-}
-
-Task {
-    "Remove express-session dependency"
-    "Add jsonwebtoken dependency"
-    "Rewrite POST /login to return a JWT"
-    "Add JWT verification middleware"
-    "Update all tests that check session state"
-}
-
-Discovery {
-    scan: ["src/**/*.js", "tests/**/*.test.js", "package.json"]
-    find: [
-        "Where is session logic currently implemented?"
-        "Which routes use session middleware?"
-        "How many tests reference session state?"
-    ]
-}
-
-Planning {
-    steps: [
-        "Run discovery and record findings in Memory"
-        "Remove session, add JWT package"
-        "Rewrite auth endpoints"
-        "Update middleware"
-        "Fix tests"
-        "Run full test suite"
-    ]
-    max_iterations: 8
-}
-
-Execution {
-    tools: [
-        read_file(path: string) -> string
-        write_file(path: string, content: string) -> bool
-        run_command(cmd: string) -> string
-        list_dir(path: string) -> string
-    ]
-    strategy: "Follow discovery findings. Update Memory after each step.
-               Run npm test after every file change."
-}
-
-Verification {
-    checks: [
-        "npm test exits with code 0"
-        "POST /login returns a token field in the response body"
-        "GET /api/profile returns 401 without Authorization header"
-    ]
-    on_fail: retry
-    max_retries: 5
-}
-```
+---
 
 ## Requirements
 
 - VS Code 1.60 or later
-- `loop` CLI for running files (optional, but needed for `loop check`, `loop run`, etc.)
+- `loop` CLI for running and validating files (optional but recommended)
+
+---
 
 ## Source
 
