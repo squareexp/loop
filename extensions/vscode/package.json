@@ -22,7 +22,11 @@
         "extensions": [
           ".loop"
         ],
-        "configuration": "./language-configuration.json"
+        "configuration": "./language-configuration.json",
+        "icon": {
+          "light": "./brain.png",
+          "dark": "./brain.png"
+        }
       }
     ],
     "grammars": [

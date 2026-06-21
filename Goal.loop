@@ -1,0 +1,41 @@
+task {
+    "Analyze the Loop DSL compiler, execution engine, and VS Code extension context. Apply the 4 Loops of Loop Engineering and the 6 Primitives (Automations, Worktrees, Skills, Connectors, Sub-agents/Checkers, and Memory/State Ledger) to optimize, expand, and reshape the language to be fully safety-guaranteed and ready for production agent orchestration."
+}
+
+state {
+    failing_tests: 0,
+    primitives_implemented: 6,
+    loops_active: 4,
+    vscode_icon_configured: true,
+    syntax_colors_updated: true,
+    has_compilation_error: false
+}
+
+tools {
+    tool read_file(path: string) -> string
+    tool write_file(path: string, content: string) -> bool
+    tool run_cargo_test() -> int
+    tool compile_extension() -> bool
+    tool log_metrics(token_burn: int, budget: int) -> bool
+}
+
+invariant {
+    state.failing_tests == 0,
+    state.has_compilation_error == false
+}
+
+strategy {
+    "1. Read OVERVIEW.md and LOOP_ENGINEERING.md to establish complete context."
+    "2. Execute run_cargo_test to verify compiler and runtime integrity."
+    "3. Use the Maker/Checker split to verify all DSL blocks compile properly."
+    "4. Refine the language parser, isolated sandbox, and state ledger to support all six primitives."
+    "5. Recompile the VS Code extension using compile_extension to verify the brain.png icon and TextMate syntax highlighting work seamlessly."
+}
+
+until {
+    state.primitives_implemented == 6 && state.loops_active == 4 && state.vscode_icon_configured == true && state.syntax_colors_updated == true
+}
+
+fallback {
+    "Roll back all uncommitted state transitions to the last valid snapshot in sled, log the invariant violation metrics, and report the bottleneck to the human engineer."
+}

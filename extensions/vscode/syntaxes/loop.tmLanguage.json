@@ -18,10 +18,19 @@
       "include": "#types"
     },
     {
+      "include": "#operators"
+    },
+    {
+      "include": "#punctuation"
+    },
+    {
+      "include": "#functions"
+    },
+    {
       "include": "#state_variables"
     },
     {
-      "include": "#tool_declarations"
+      "include": "#properties"
     }
   ],
   "repository": {
@@ -41,7 +50,7 @@
     "keywords": {
       "patterns": [
         {
-          "name": "keyword.control.loop",
+          "name": "keyword.control.block.loop",
           "match": "\\b(task|state|tools|invariant|strategy|until|fallback)\\b"
         },
         {
@@ -77,19 +86,70 @@
       "patterns": [
         {
           "name": "constant.numeric.integer.loop",
-          "match": "\\b[0-9]+\\b"
+          "match": "\\b-?[0-9]+\\b"
+        }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        {
+          "name": "keyword.operator.comparison.loop",
+          "match": "==|!=|<=|>=|<|>"
+        },
+        {
+          "name": "keyword.operator.logical.loop",
+          "match": "&&|\\|\\|"
+        },
+        {
+          "name": "keyword.operator.arrow.loop",
+          "match": "->"
+        }
+      ]
+    },
+    "punctuation": {
+      "patterns": [
+        {
+          "name": "punctuation.section.block.loop",
+          "match": "\\{|\\}"
+        },
+        {
+          "name": "punctuation.definition.group.loop",
+          "match": "\\(|\\)"
+        },
+        {
+          "name": "punctuation.separator.loop",
+          "match": ",|:"
         }
       ]
     },
     "state_variables": {
       "patterns": [
         {
-          "name": "variable.other.member.loop",
-          "match": "\\bstate\\.[a-zA-Z_][a-zA-Z0-9_]*\\b"
+          "match": "\\b(state)\\b(?:\\.([a-zA-Z_][a-zA-Z0-9_]*))?",
+          "captures": {
+            "1": {
+              "name": "variable.language.state.loop"
+            },
+            "2": {
+              "name": "variable.other.member.loop"
+            }
+          }
         }
       ]
     },
-    "tool_declarations": {
+    "properties": {
+      "patterns": [
+        {
+          "match": "\\b([a-zA-Z_][a-zA-Z0-9_]*)\\s*(?=:)",
+          "captures": {
+            "1": {
+              "name": "variable.other.property.loop"
+            }
+          }
+        }
+      ]
+    },
+    "functions": {
       "patterns": [
         {
           "match": "\\b(tool)\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\b",
@@ -98,7 +158,15 @@
               "name": "keyword.other.loop"
             },
             "2": {
-              "name": "entity.name.function.loop"
+              "name": "entity.name.function.declaration.loop"
+            }
+          }
+        },
+        {
+          "match": "\\b([a-zA-Z_][a-zA-Z0-9_]*)\\s*(?=\\()",
+          "captures": {
+            "1": {
+              "name": "entity.name.function.call.loop"
             }
           }
         }
