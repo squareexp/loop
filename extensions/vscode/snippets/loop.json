@@ -1,0 +1,132 @@
+{
+  "Full Loop File": {
+    "prefix": "loop",
+    "scope": "loop",
+    "body": [
+      "Goal [",
+      "    ${1:Describe what you want to achieve in natural language}",
+      "]",
+      "",
+      "Memory {",
+      "    project_path: \"${2:./}\"",
+      "    notes: []",
+      "}",
+      "",
+      "Discovery {",
+      "    scan: [\"${3:**/*.ts}\"]",
+      "    find: [",
+      "        \"${4:What already exists?}\"",
+      "        \"${5:What is missing?}\"",
+      "    ]",
+      "}",
+      "",
+      "Planning {",
+      "    steps: [",
+      "        \"${6:First step}\"",
+      "        \"${7:Second step}\"",
+      "        \"${8:Third step}\"",
+      "    ]",
+      "    max_iterations: ${9:5}",
+      "}",
+      "",
+      "Execution {",
+      "    tools: [",
+      "        read_file(path: string) -> string",
+      "        write_file(path: string, content: string) -> bool",
+      "        run_command(cmd: string) -> string",
+      "    ]",
+      "    strategy: \"${10:Execute steps sequentially. Verify after each tool call.}\"",
+      "}",
+      "",
+      "Verification {",
+      "    checks: [",
+      "        \"${11:First success condition}\"",
+      "        \"${12:Second success condition}\"",
+      "    ]",
+      "    on_fail: retry",
+      "    max_retries: ${13:3}",
+      "}"
+    ],
+    "description": "Create a complete Loop Engineering file"
+  },
+  "Goal Block": {
+    "prefix": "goal",
+    "scope": "loop",
+    "body": [
+      "Goal [",
+      "    ${1:Describe the goal}",
+      "]"
+    ],
+    "description": "Add a Goal block"
+  },
+  "Memory Block": {
+    "prefix": "memory",
+    "scope": "loop",
+    "body": [
+      "Memory {",
+      "    ${1:key}: \"${2:value}\"",
+      "}"
+    ],
+    "description": "Add a Memory block"
+  },
+  "Discovery Block": {
+    "prefix": "discovery",
+    "scope": "loop",
+    "body": [
+      "Discovery {",
+      "    scan: [\"${1:**/*.ts}\"]",
+      "    find: [",
+      "        \"${2:What needs doing?}\"",
+      "    ]",
+      "}"
+    ],
+    "description": "Add a Discovery block"
+  },
+  "Planning Block": {
+    "prefix": "planning",
+    "scope": "loop",
+    "body": [
+      "Planning {",
+      "    steps: [",
+      "        \"${1:First step}\"",
+      "        \"${2:Second step}\"",
+      "    ]",
+      "    max_iterations: ${3:5}",
+      "}"
+    ],
+    "description": "Add a Planning block"
+  },
+  "Execution Block": {
+    "prefix": "execution",
+    "scope": "loop",
+    "body": [
+      "Execution {",
+      "    tools: [",
+      "        ${1:read_file}(${2:path}: string) -> string",
+      "    ]",
+      "    strategy: \"${3:Execute steps in order}\"",
+      "}"
+    ],
+    "description": "Add an Execution block"
+  },
+  "Verification Block": {
+    "prefix": "verification",
+    "scope": "loop",
+    "body": [
+      "Verification {",
+      "    checks: [",
+      "        \"${1:Success condition}\"",
+      "    ]",
+      "    on_fail: ${2|retry,complete|}",
+      "    max_retries: ${3:3}",
+      "}"
+    ],
+    "description": "Add a Verification block"
+  },
+  "Tool Declaration": {
+    "prefix": "tool",
+    "scope": "loop",
+    "body": "${1:tool_name}(${2:param}: ${3|string,int,bool|}) -> ${4|string,bool,int|}",
+    "description": "Declare an agent tool"
+  }
+}

@@ -1,27 +1,23 @@
 {
   "name": "loopagent",
-  "displayName": "LoopAgent",
-  "description": "Support Extension for loop agentic language",
-  "version": "0.1.0",
+  "displayName": "Loop Engineering Language",
+  "description": "Language support for .loop files — structured AI agent task files with Goal, Memory, Discovery, Planning, Execution, and Verification blocks.",
+  "version": "0.2.0",
   "publisher": "squareexp",
   "icon": "brain.png",
   "engines": {
     "vscode": "^1.60.0"
   },
   "categories": [
-    "Programming Languages"
+    "Programming Languages",
+    "Snippets"
   ],
   "contributes": {
     "languages": [
       {
         "id": "loop",
-        "aliases": [
-          "Loop",
-          "loop"
-        ],
-        "extensions": [
-          ".loop"
-        ],
+        "aliases": ["Loop", "loop"],
+        "extensions": [".loop"],
         "configuration": "./language-configuration.json",
         "icon": {
           "light": "./brain.png",
@@ -34,6 +30,12 @@
         "language": "loop",
         "scopeName": "source.loop",
         "path": "./syntaxes/loop.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "loop",
+        "path": "./snippets/loop.json"
       }
     ]
   }

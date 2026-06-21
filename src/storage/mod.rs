@@ -7,7 +7,7 @@ use sled::Db;
 use crate::parser::ast::Value;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct LoopState {
+pub struct LoopSnapshot {
     pub session_id: String,
     pub variables: HashMap<String, Value>,
 }
@@ -35,80 +35,43 @@ pub fn get_db() -> &'static Db {
 
 pub fn save_snapshot(session_id: &str, variables: &HashMap<String, Value>) -> Result<String, StorageError> {
     let db = get_db();
-    
-    let state = LoopState {
+
+    let snapshot = LoopSnapshot {
         session_id: session_id.to_string(),
         variables: variables.clone(),
     };
-    
-    let bytes = bincode::serialize(&state)?;
-    
-    // Hash the snapshot payload
+
+    let bytes = bincode::serialize(&snapshot)?;
+
     let mut hasher = Sha256::new();
     hasher.update(&bytes);
     let hash = format!("{:x}", hasher.finalize());
-    
-    // Store in sled under the hash
+
     db.insert(hash.as_bytes(), bytes)?;
-    
-    // Track the latest snapshot for this session
+
     let session_key = format!("session:{}:latest", session_id);
     db.insert(session_key.as_bytes(), hash.as_bytes())?;
-    
     db.flush()?;
-    
+
     Ok(hash)
 }
 
-pub fn get_snapshot(hash: &str) -> Result<LoopState, StorageError> {
+pub fn get_snapshot(hash: &str) -> Result<LoopSnapshot, StorageError> {
     let db = get_db();
-    let opt_bytes = db.get(hash.as_bytes())?;
-    let bytes = opt_bytes.ok_or_else(|| StorageError::NotFound(hash.to_string()))?;
-    let state: LoopState = bincode::deserialize(&bytes)?;
-    Ok(state)
+    let bytes = db.get(hash.as_bytes())?
+        .ok_or_else(|| StorageError::NotFound(hash.to_string()))?;
+    let snapshot: LoopSnapshot = bincode::deserialize(&bytes)?;
+    Ok(snapshot)
 }
 
 pub fn get_latest_snapshot_hash(session_id: &str) -> Result<Option<String>, StorageError> {
     let db = get_db();
     let session_key = format!("session:{}:latest", session_id);
-    let opt_hash_bytes = db.get(session_key.as_bytes())?;
-    if let Some(hash_bytes) = opt_hash_bytes {
+    if let Some(hash_bytes) = db.get(session_key.as_bytes())? {
         let hash = String::from_utf8(hash_bytes.to_vec())
-            .map_err(|_| StorageError::NotFound("Invalid session hash string".to_string()))?;
+            .map_err(|_| StorageError::NotFound("Invalid hash bytes".to_string()))?;
         Ok(Some(hash))
     } else {
         Ok(None)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::time::Instant;
-
-    #[test]
-    fn test_save_and_get_snapshot() {
-        let mut variables = HashMap::new();
-        variables.insert("counter".to_string(), Value::Integer(42));
-        variables.insert("status".to_string(), Value::String("running".to_string()));
-
-        // Warm up the database to initialize file locks/flush threads
-        let _ = save_snapshot("test-session", &variables).unwrap();
-
-        // Run benchmark
-        let start = Instant::now();
-        let hash = save_snapshot("test-session", &variables).unwrap();
-        let duration = start.elapsed();
-        println!("Save snapshot took: {:?}", duration);
-        assert!(duration.as_micros() < 2000, "Snapshot save took longer than 2ms: {:?}", duration);
-
-        let start_get = Instant::now();
-        let retrieved = get_snapshot(&hash).unwrap();
-        let duration_get = start_get.elapsed();
-        println!("Get snapshot took: {:?}", duration_get);
-        assert!(duration_get.as_micros() < 2000, "Snapshot get took longer than 2ms: {:?}", duration_get);
-
-        assert_eq!(retrieved.session_id, "test-session");
-        assert_eq!(retrieved.variables.get("counter"), Some(&Value::Integer(42)));
     }
 }

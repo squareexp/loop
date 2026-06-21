@@ -1,36 +1,57 @@
-task {
-    "Analyze the Loop DSL compiler, execution engine, and VS Code extension context. Apply the 4 Loops of Loop Engineering and the 6 Primitives (Automations, Worktrees, Skills, Connectors, Sub-agents/Checkers, and Memory/State Ledger) to optimize, expand, and reshape the language to be fully safety-guaranteed and ready for production agent orchestration."
+// Goal.loop — a minimal Loop file template
+// This is also used by 'loop scaffold' to generate the workspace.
+
+Goal [
+    Build the Loop Engineering Language toolchain — parser, CLI, and VS Code
+    extension — so AI agents can receive structured .loop files and execute
+    autonomous engineering loops with memory, failure tracking, and verification.
+]
+
+Memory {
+    project_name: "loop"
+    repo_path: "."
+    language: "Rust"
+    notes: []
 }
 
-state {
-    failing_tests: 0,
-    primitives_implemented: 6,
-    loops_active: 4,
-    vscode_icon_configured: true,
-    syntax_colors_updated: true,
-    has_compilation_error: false
+Discovery {
+    scan: ["src/**/*.rs", "extensions/**/*.json", "*.loop"]
+    find: [
+        "What CLI commands are already implemented?"
+        "Which VS Code extension features are missing?"
+        "Are there any failing tests?"
+    ]
 }
 
-tools {
-    tool read_file(path: string) -> string
-    tool write_file(path: string, content: string) -> bool
-    tool run_cargo_test() -> int
-    tool compile_extension() -> bool
-    tool log_metrics(token_burn: int, budget: int) -> bool
+Planning {
+    steps: [
+        "Run 'cargo test' and check for failures"
+        "Run 'loop check main.loop' to validate the main example"
+        "Run 'loop scaffold main.loop' to generate workspace structure"
+        "Review extensions/vscode for missing keyword completions"
+        "Rebuild the .vsix package with updated grammar"
+    ]
+    max_iterations: 5
 }
 
-invariant {
-    (state.failing_tests == 0) && (state.has_compilation_error == false)
+Execution {
+    tools: [
+        read_file(path: string) -> string
+        write_file(path: string, content: string) -> bool
+        run_command(cmd: string) -> string
+        list_dir(path: string) -> string
+    ]
+    strategy: "Work through steps in order. After each change, verify with
+               'cargo build' and 'loop check'. Keep changes minimal and focused."
 }
 
-strategy {
-    "1. Read OVERVIEW.md and LOOP_ENGINEERING.md to establish complete context. 2. Execute run_cargo_test to verify compiler and runtime integrity. 3. Use the Maker/Checker split to verify all DSL blocks compile properly. 4. Refine the language parser, isolated sandbox, and state ledger to support all six primitives. 5. Recompile the VS Code extension using compile_extension to verify the brain.png icon and TextMate syntax highlighting work seamlessly."
-}
-
-until {
-    ((state.primitives_implemented == 6) && (state.loops_active == 4)) && ((state.vscode_icon_configured == true) && (state.syntax_colors_updated == true))
-}
-
-fallback {
-    "Roll back all uncommitted state transitions to the last valid snapshot in sled, log the invariant violation metrics, and report the bottleneck to the human engineer."
+Verification {
+    checks: [
+        "cargo test passes with all tests green"
+        "loop check main.loop reports no errors"
+        "loop inspect Goal.loop prints the AST cleanly"
+        "VS Code extension highlights Goal/Memory/Discovery/Planning/Execution/Verification"
+    ]
+    on_fail: retry
+    max_retries: 3
 }

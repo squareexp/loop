@@ -10,6 +10,7 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
     event::DisableMouseCapture,
 };
+use crate::scaffold::LoopStatus;
 
 pub struct TuiDashboard {
     terminal: Option<Terminal<CrosstermBackend<io::Stdout>>>,
@@ -33,92 +34,111 @@ impl TuiDashboard {
         Ok(Self { terminal: None })
     }
 
-    pub fn draw(&mut self, engine: &crate::runtime::engine::Engine, active_provider: &str) -> Result<(), io::Error> {
+    pub fn draw(
+        &mut self,
+        engine: &crate::runtime::engine::Engine,
+        active_provider: &str,
+    ) -> Result<(), io::Error> {
+        let lf = &engine.loop_file;
+        let ls = &engine.loop_state;
+
         if let Some(ref mut term) = self.terminal {
             term.draw(|f| {
                 let size = f.size();
 
-                // Layout: Title (3 rows), Main (rest)
                 let chunks = Layout::default()
                     .direction(Direction::Vertical)
-                    .constraints([
-                        Constraint::Length(3),
-                        Constraint::Min(10),
-                    ])
+                    .constraints([Constraint::Length(3), Constraint::Min(10)])
                     .split(size);
 
-                // Title Widget
-                let title = Paragraph::new(" LOOP: AGENT ENGINE CONTROL PANEL ")
-                    .block(Block::default().borders(Borders::ALL));
+                let title = Paragraph::new(format!(
+                    " LOOP AGENT  ·  {}  ·  {}",
+                    active_provider,
+                    lf.goal.text.trim().chars().take(60).collect::<String>()
+                ))
+                .block(Block::default().borders(Borders::ALL));
                 f.render_widget(title, chunks[0]);
 
-                // Main layout: Left (Metrics), Right (State & Invariants)
                 let main_chunks = Layout::default()
                     .direction(Direction::Horizontal)
-                    .constraints([
-                        Constraint::Percentage(50),
-                        Constraint::Percentage(50),
-                    ])
+                    .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
                     .split(chunks[1]);
 
-                // Left panel: Stats
-                let mut stats_text = vec![
-                    format!("Session ID:        {}", engine.session_id),
-                    format!("Active Provider:   {}", active_provider),
-                    format!("Iteration Depth:   {} / {}", engine.iteration_count, engine.max_iterations),
-                    format!("Spent Budget:      ${:.4} / ${:.2}", engine.budget_usd, engine.max_budget_usd),
+                // Left: metrics + current step
+                let status_str = match ls.status {
+                    LoopStatus::Pending   => "pending",
+                    LoopStatus::Running   => "running",
+                    LoopStatus::Complete  => "complete ✓",
+                    LoopStatus::Exhausted => "exhausted ✗",
+                };
+                let mut left_lines = vec![
+                    format!("Session:     {}", engine.session_id),
+                    format!("Provider:    {}", active_provider),
+                    format!("Status:      {}", status_str),
+                    format!("Iteration:   {} / {}", ls.iteration, ls.max_iterations),
+                    format!("Budget:      ${:.4} / ${:.2}", engine.budget_usd, engine.max_budget_usd),
+                    String::new(),
+                    "Planning Steps:".to_string(),
                 ];
-                if let Some(err) = &engine.last_error {
-                    stats_text.push(format!("\nLast Error:\n{}", err));
+                for (i, step) in lf.planning.steps.iter().enumerate() {
+                    let marker = if ls.completed_steps.contains(&i) { "✓" }
+                        else if i == ls.current_step { "→" }
+                        else { "○" };
+                    left_lines.push(format!("  {} {}. {}", marker, i + 1,
+                        step.chars().take(40).collect::<String>()));
                 }
+                if let Some(err) = &engine.last_error {
+                    left_lines.push(String::new());
+                    left_lines.push(format!("Last Error:\n{}", err));
+                }
+                let left = Paragraph::new(left_lines.join("\n"))
+                    .block(Block::default().title(" Status & Planning ").borders(Borders::ALL));
+                f.render_widget(left, main_chunks[0]);
 
-                let stats_paragraph = Paragraph::new(stats_text.join("\n"))
-                    .block(Block::default().title(" Metrics & Performance ").borders(Borders::ALL));
-                f.render_widget(stats_paragraph, main_chunks[0]);
-
-                // Right panel layout: Top (State Variables), Bottom (Invariants)
+                // Right: tool history + verification
                 let right_chunks = Layout::default()
                     .direction(Direction::Vertical)
-                    .constraints([
-                        Constraint::Percentage(60),
-                        Constraint::Percentage(40),
-                    ])
+                    .constraints([Constraint::Percentage(60), Constraint::Percentage(40)])
                     .split(main_chunks[1]);
 
-                // State Variables
-                let mut state_items = Vec::new();
-                for (k, v) in &engine.state {
-                    state_items.push(format!("  {}: {:?}", k, v));
-                }
-                let state_paragraph = Paragraph::new(state_items.join("\n"))
-                    .block(Block::default().title(" State Ledger Variables ").borders(Borders::ALL));
-                f.render_widget(state_paragraph, right_chunks[0]);
+                let history: Vec<String> = ls.tool_history.iter().rev().take(10)
+                    .map(|t| format!("  {}", &t[..t.len().min(60)]))
+                    .collect::<Vec<_>>()
+                    .into_iter().rev().collect();
+                let failed_tools: Vec<String> = ls.failed_tools.iter()
+                    .map(|ft| format!("  ✗ {}: {}", ft.tool, &ft.error[..ft.error.len().min(50)]))
+                    .collect();
 
-                // Invariants
-                let mut inv_items = Vec::new();
-                for (i, inv) in engine.ast.invariants.iter().enumerate() {
-                    inv_items.push(format!("  [Passed] Invariant #{}: {:?}", i + 1, inv));
+                let mut tool_lines = history;
+                if !failed_tools.is_empty() {
+                    tool_lines.push(String::new());
+                    tool_lines.push("Failed:".to_string());
+                    tool_lines.extend(failed_tools);
                 }
-                if inv_items.is_empty() {
-                    inv_items.push("  No invariants defined.".to_string());
-                }
-                let inv_paragraph = Paragraph::new(inv_items.join("\n"))
-                    .block(Block::default().title(" Invariant Assertions ").borders(Borders::ALL));
-                f.render_widget(inv_paragraph, right_chunks[1]);
+                let tool_panel = Paragraph::new(tool_lines.join("\n"))
+                    .block(Block::default().title(" Tool History ").borders(Borders::ALL));
+                f.render_widget(tool_panel, right_chunks[0]);
+
+                let verif_lines: Vec<String> = lf.verification.checks.iter()
+                    .map(|c| {
+                        let marker = if ls.failed_checks.contains(c) { "✗" } else { "○" };
+                        format!("  {} {}", marker, c)
+                    })
+                    .collect();
+                let verif_panel = Paragraph::new(verif_lines.join("\n"))
+                    .block(Block::default().title(" Verification Checks ").borders(Borders::ALL));
+                f.render_widget(verif_panel, right_chunks[1]);
             })?;
         } else {
-            // Fallback to clean stdout printing when TTY is not available (e.g. CI/non-interactive test)
-            println!("\n--- LOOP iteration {} ---", engine.iteration_count);
-            println!("Session:    {}", engine.session_id);
-            println!("Provider:   {}", active_provider);
-            println!("Variables:");
-            for (k, v) in &engine.state {
-                println!("  {}: {:?}", k, v);
-            }
+            // Fallback for non-TTY (CI)
+            println!("\n─── LOOP iteration {} ─────────────────────", ls.iteration);
+            println!("Goal:      {}", lf.goal.text.trim().chars().take(80).collect::<String>());
+            println!("Step:      {}/{}", ls.current_step + 1, lf.planning.steps.len());
+            println!("Provider:  {}", active_provider);
             if let Some(err) = &engine.last_error {
-                println!("Error:      {}", err);
+                println!("Error:     {}", err);
             }
-            println!("-----------------------------");
+            println!("──────────────────────────────────────────────");
         }
         Ok(())
     }
@@ -129,11 +149,7 @@ impl Drop for TuiDashboard {
         if self.terminal.is_some() {
             disable_raw_mode().ok();
             if let Some(ref mut term) = self.terminal {
-                execute!(
-                    term.backend_mut(),
-                    LeaveAlternateScreen,
-                    DisableMouseCapture
-                ).ok();
+                execute!(term.backend_mut(), LeaveAlternateScreen, DisableMouseCapture).ok();
                 term.show_cursor().ok();
             }
         }

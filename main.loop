@@ -1,35 +1,62 @@
-task {
-    "Develop and integrate a Rust-backed Language Server Protocol (LSP) for the Loop language to provide real-time syntax completions, compiler errors, and warning diagnostics inside VS Code when editing incomplete .loop files."
-}
+// main.loop — example Loop Engineering file
+// Run: loop check main.loop
+//      loop scaffold main.loop
+//      loop run main.loop --provider claude
 
-state {
-    syntax_errors: 0,
-    warnings_found: 0,
-    completions_delivered: 0,
-    is_lsp_connected: true,
-    has_rust_panic: false,
+Goal [
+    Develop and integrate a Rust-backed Language Server Protocol (LSP) for the
+    Loop language — providing real-time syntax completions, compiler errors, and
+    diagnostics inside VS Code when editing .loop files.
+]
+
+Memory {
+    project_path: "./loop"
+    lsp_connected: false
     diagnostics_sent: false
+    known_tech: ["Rust", "pest", "tower-lsp", "VS Code Extension API"]
 }
 
-tools {
-    tool parse_pest_grammar(input_file: string) -> int
-    tool generate_diagnostics(input_file: string) -> string
-    tool fetch_completions(cursor_offset: int) -> string
-    tool send_lsp_notification(method: string, payload: string) -> bool
+Discovery {
+    scan: ["src/**/*.rs", "src/parser/loop.pest", "extensions/vscode/**/*.json"]
+    find: [
+        "Is tower-lsp already in Cargo.toml?"
+        "What grammar rules are defined in loop.pest?"
+        "Does the VS Code extension have a server activation entry point?"
+    ]
 }
 
-invariant {
-    (state.is_lsp_connected == true) && (state.has_rust_panic == false)
+Planning {
+    steps: [
+        "Add tower-lsp dependency to Cargo.toml"
+        "Create src/lsp/mod.rs with LoopLspServer struct"
+        "Implement textDocument/didOpen and textDocument/didChange handlers"
+        "Wire parse_loop_file diagnostics into publishDiagnostics notifications"
+        "Add completions for Goal/Memory/Discovery/Planning/Execution/Verification keywords"
+        "Update VS Code extension to launch the LSP server binary"
+        "Write integration test: open broken .loop file, verify diagnostic appears"
+    ]
+    max_iterations: 10
 }
 
-strategy {
-    "1. Run the Pest parser on the active .loop file using the Rust parsing engine to check grammar rules. 2. If parsing fails, extract the syntax error line and column info from the Pest error details. 3. Compile warnings for unused variables or empty blocks in the state ledger schema. 4. Send a publishDiagnostics notification containing the errors and warnings back to the VS Code client. 5. When the user requests autocomplete, compute matching keywords or tool definitions based on cursor offset and return completions."
+Execution {
+    tools: [
+        read_file(path: string) -> string
+        write_file(path: string, content: string) -> bool
+        run_command(cmd: string) -> string
+        list_dir(path: string) -> string
+    ]
+    strategy: "Execute planning steps sequentially. After each file change run
+               'cargo check' to confirm the build stays clean. Track progress
+               in .loop/state.json."
 }
 
-until {
-    (state.diagnostics_sent == true) && (state.syntax_errors == 0)
-}
-
-fallback {
-    "Capture the compiler parse diagnostics, convert them into editor warnings, and prompt the LLM to write correct syntactically complete Loop blocks."
+Verification {
+    checks: [
+        "cargo build succeeds with no errors"
+        "loop check main.loop reports all checks passed"
+        "Opening a broken .loop file in VS Code shows a red underline error"
+        "Typing 'Goal' in a new .loop file triggers autocomplete"
+    ]
+    on_fail: retry
+    max_retries: 5
 }

@@ -186,26 +186,24 @@ fn parse_llm_json(text: &str) -> Result<AgentResponse, String> {
     })
 }
 
-fn mock_reason(prompt: &str, tools: &[ToolDecl]) -> Result<AgentResponse, String> {
-    // Intelligent simulation for testing:
-    // Check if the prompt references write_file, counter, or other vars
-    if prompt.contains("is_done") && prompt.contains("false") {
-        if tools.iter().any(|t| t.name == "write_file") {
-            return Ok(AgentResponse {
-                reasoning: "Let's call write_file to proceed with work.".to_string(),
-                tool_call: Some(ToolCallRequest {
-                    name: "write_file".to_string(),
-                    args: vec![
-                        Value::String("src/main.rs".to_string()),
-                        Value::String("fn main() { println!(\"fixed\"); }".to_string()),
-                    ],
-                }),
-            });
-        }
+fn mock_reason(_prompt: &str, tools: &[ToolDecl]) -> Result<AgentResponse, String> {
+    // Mock mode: pick the first available tool and make a plausible call
+    if let Some(tool) = tools.first() {
+        let args = tool.params.iter().map(|p| {
+            match p.name.as_str() {
+                "path" | "file" => Value::String("src/main.rs".to_string()),
+                "cmd"  | "command" => Value::String("echo hello".to_string()),
+                _ => Value::String("mock_value".to_string()),
+            }
+        }).collect();
+        return Ok(AgentResponse {
+            reasoning: format!("Mock: calling {} to progress the loop.", tool.name),
+            tool_call: Some(ToolCallRequest { name: tool.name.clone(), args }),
+        });
     }
 
     Ok(AgentResponse {
-        reasoning: "We have nothing left to do. The state is clean.".to_string(),
+        reasoning: "Mock: no tools available, signalling done.".to_string(),
         tool_call: None,
     })
 }

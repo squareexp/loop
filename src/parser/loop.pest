@@ -1,57 +1,78 @@
+// ─── Primitives ──────────────────────────────────────────────────────────────
+
 char = {
     !("\"" | "\\") ~ ANY
-  | "\\" ~ ("\"" | "\\" | "/" | "b" | "f" | "n" | "r" | "t")
-  | "\\" ~ ("u" ~ ASCII_HEX_DIGIT{4})
+  | "\\" ~ ("\"" | "\\" | "n" | "t" | "r")
 }
-string = ${ "\"" ~ inner_str ~ "\"" }
-inner_str = @{ char* }
+string     = ${ "\"" ~ inner_str ~ "\"" }
+inner_str  = @{ char* }
+integer    = @{ "-"? ~ ASCII_DIGIT+ }
+boolean    = @{ "true" | "false" }
+ident      = @{ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")* }
 
-integer = @{ "-"? ~ ASCII_DIGIT+ }
-boolean = @{ "true" | "false" }
+// ─── Goal Block ──────────────────────────────────────────────────────────────
+// Natural language text — no quotes needed between [ ]
 
-ident = @{ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")* }
+goal_text  = @{ (!"]" ~ ANY)* }
+goal_block = { "Goal" ~ "[" ~ goal_text ~ "]" }
 
-// Expression Grammar
-expr = { primary ~ (bin_op ~ primary)* }
-primary = { boolean | integer | string | state_var | tool_call | "(" ~ expr ~ ")" }
-state_var = { "state." ~ ident }
-tool_call = { ident ~ "(" ~ (expr ~ ("," ~ expr)*)? ~ ")" }
-bin_op = { "==" | "!=" | "<=" | ">=" | "<" | ">" | "&&" | "||" }
+// ─── String Array ─────────────────────────────────────────────────────────────
 
-// Blocks
-task_block = { "task" ~ "{" ~ string ~ "}" }
+string_array = { "[" ~ (string ~ ","?)* ~ "]" }
 
-state_field = { ident ~ ":" ~ (string | integer | boolean) }
-state_block = { "state" ~ "{" ~ (state_field ~ ("," ~ state_field)* ~ ","?)? ~ "}" }
+// ─── Memory Block ─────────────────────────────────────────────────────────────
 
-tool_param = { ident ~ ":" ~ param_type }
-param_type = { "string" | "int" | "bool" }
-tool_decl = { "tool" ~ ident ~ "(" ~ (tool_param ~ ("," ~ tool_param)*)? ~ ")" ~ ("->" ~ param_type)? }
-tools_block = { "tools" ~ "{" ~ tool_decl* ~ "}" }
+memory_value = { string_array | string | integer | boolean }
+memory_field = { ident ~ ":" ~ memory_value }
+memory_block = { "Memory" ~ "{" ~ memory_field* ~ "}" }
 
-invariant_block = { "invariant" ~ "{" ~ (expr ~ ("," ~ expr)* ~ ","?)? ~ "}" }
+// ─── Discovery Block ──────────────────────────────────────────────────────────
 
-strategy_block = { "strategy" ~ "{" ~ string ~ "}" }
+scan_field       = { "scan" ~ ":" ~ string_array }
+find_field       = { "find" ~ ":" ~ string_array }
+// silent — children appear directly in the parse tree
+discovery_item   = _{ scan_field | find_field }
+discovery_block  = { "Discovery" ~ "{" ~ discovery_item* ~ "}" }
 
-until_block = { "until" ~ "{" ~ expr ~ "}" }
+// ─── Planning Block ───────────────────────────────────────────────────────────
 
-fallback_block = { "fallback" ~ "{" ~ string ~ "}" }
+steps_field          = { "steps" ~ ":" ~ string_array }
+max_iterations_field = { "max_iterations" ~ ":" ~ integer }
+planning_item        = _{ steps_field | max_iterations_field }
+planning_block       = { "Planning" ~ "{" ~ planning_item* ~ "}" }
 
-block = {
-    task_block
-  | state_block
-  | tools_block
-  | invariant_block
-  | strategy_block
-  | until_block
-  | fallback_block
+// ─── Execution Block ──────────────────────────────────────────────────────────
+
+param_type       = { "string" | "int" | "bool" }
+tool_param       = { ident ~ ":" ~ param_type }
+tool_decl        = { ident ~ "(" ~ (tool_param ~ ("," ~ tool_param)*)? ~ ")" ~ ("->" ~ param_type)? ~ ","? }
+tools_field      = { "tools" ~ ":" ~ "[" ~ tool_decl* ~ "]" }
+strategy_field   = { "strategy" ~ ":" ~ string }
+execution_item   = _{ tools_field | strategy_field }
+execution_block  = { "Execution" ~ "{" ~ execution_item* ~ "}" }
+
+// ─── Verification Block ───────────────────────────────────────────────────────
+
+checks_field        = { "checks" ~ ":" ~ string_array }
+on_fail_value       = @{ "retry" | "complete" }
+on_fail_field       = { "on_fail" ~ ":" ~ on_fail_value }
+max_retries_field   = { "max_retries" ~ ":" ~ integer }
+verification_item   = _{ checks_field | on_fail_field | max_retries_field }
+verification_block  = { "Verification" ~ "{" ~ verification_item* ~ "}" }
+
+// ─── Top-Level File ───────────────────────────────────────────────────────────
+
+// silent — block types appear directly as children of file
+loop_block = _{
+    goal_block
+  | memory_block
+  | discovery_block
+  | planning_block
+  | execution_block
+  | verification_block
 }
 
-file = {
-    SOI ~
-    block* ~
-    EOI
-}
+file = { SOI ~ loop_block* ~ EOI }
 
 WHITESPACE = _{ " " | "\t" | "\r" | "\n" }
-COMMENT = _{ "/*" ~ (!"*/" ~ ANY)* ~ "*/" | "//" ~ (!"\n" ~ ANY)* }
+COMMENT    = _{ "/*" ~ (!"*/" ~ ANY)* ~ "*/" | "//" ~ (!"\n" ~ ANY)* }

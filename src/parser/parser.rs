@@ -8,292 +8,335 @@ use crate::parser::ast::*;
 pub struct LoopParser;
 
 #[derive(Debug, thiserror::Error)]
-pub enum ParserError {
-    #[error("Pest parsing error: {0}")]
-    PestError(#[from] pest::error::Error<Rule>),
-    #[error("Missing block: {0}")]
-    MissingBlock(String),
-    #[error("Duplicate block: {0}")]
+pub enum ParseError {
+    #[error("Syntax error: {0}")]
+    Pest(#[from] pest::error::Error<Rule>),
+    #[error("Duplicate block: '{0}' appears more than once")]
     DuplicateBlock(String),
-    #[error("Invalid value format: {0}")]
-    InvalidValue(String),
+    #[error("Invalid integer: {0}")]
+    InvalidInteger(String),
 }
 
-pub fn parse_loop_file(content: &str) -> Result<LoopAst, ParserError> {
+pub fn parse_loop_file(content: &str) -> Result<LoopFile, ParseError> {
     let mut pairs = LoopParser::parse(Rule::file, content)?;
-    let file_pair = pairs.next().ok_or_else(|| ParserError::MissingBlock("file".to_string()))?;
+    let file_pair = pairs.next().unwrap();
 
-    let mut task: Option<String> = None;
-    let mut state: Option<HashMap<String, Value>> = None;
-    let mut tools: Option<Vec<ToolDecl>> = None;
-    let mut invariants: Option<Vec<Expr>> = None;
-    let mut strategy: Option<String> = None;
-    let mut until: Option<Expr> = None;
-    let mut fallback: Option<String> = None;
+    let mut goal: Option<GoalBlock> = None;
+    let mut memory: Option<MemoryBlock> = None;
+    let mut discovery: Option<DiscoveryBlock> = None;
+    let mut planning: Option<PlanningBlock> = None;
+    let mut execution: Option<ExecutionBlock> = None;
+    let mut verification: Option<VerificationBlock> = None;
 
-    for item in file_pair.into_inner() {
-        match item.as_rule() {
-            Rule::block => {
-                let inner = item.into_inner().next().unwrap();
-                match inner.as_rule() {
-                    Rule::task_block => {
-                        if task.is_some() {
-                            return Err(ParserError::DuplicateBlock("task".to_string()));
-                        }
-                        let string_pair = inner.into_inner().next().unwrap();
-                        task = Some(parse_string_literal(string_pair)?);
-                    }
-                    Rule::state_block => {
-                        if state.is_some() {
-                            return Err(ParserError::DuplicateBlock("state".to_string()));
-                        }
-                        let mut state_map = HashMap::new();
-                        for field in inner.into_inner() {
-                            if field.as_rule() == Rule::state_field {
-                                let mut parts = field.into_inner();
-                                let name = parts.next().unwrap().as_str().to_string();
-                                let val_pair = parts.next().unwrap();
-                                let val = match val_pair.as_rule() {
-                                    Rule::string => Value::String(parse_string_literal(val_pair)?),
-                                    Rule::integer => Value::Integer(val_pair.as_str().parse().map_err(|_| ParserError::InvalidValue("integer".to_string()))?),
-                                    Rule::boolean => Value::Boolean(val_pair.as_str() == "true"),
-                                    _ => unreachable!(),
-                                };
-                                state_map.insert(name, val);
-                            }
-                        }
-                        state = Some(state_map);
-                    }
-                    Rule::tools_block => {
-                        if tools.is_some() {
-                            return Err(ParserError::DuplicateBlock("tools".to_string()));
-                        }
-                        let mut decls = Vec::new();
-                        for decl in inner.into_inner() {
-                            if decl.as_rule() == Rule::tool_decl {
-                                let mut parts = decl.into_inner();
-                                let name = parts.next().unwrap().as_str().to_string();
-                                let mut params = Vec::new();
-                                let mut return_type = None;
-
-                                for part in parts {
-                                    match part.as_rule() {
-                                        Rule::tool_param => {
-                                            let mut param_parts = part.into_inner();
-                                            let p_name = param_parts.next().unwrap().as_str().to_string();
-                                            let p_type_str = param_parts.next().unwrap().as_str();
-                                            let p_type = match p_type_str {
-                                                "string" => ParamType::String,
-                                                "int" => ParamType::Int,
-                                                "bool" => ParamType::Bool,
-                                                _ => unreachable!(),
-                                            };
-                                            params.push(ToolParam { name: p_name, param_type: p_type });
-                                        }
-                                        Rule::param_type => {
-                                            let p_type = match part.as_str() {
-                                                "string" => ParamType::String,
-                                                "int" => ParamType::Int,
-                                                "bool" => ParamType::Bool,
-                                                _ => unreachable!(),
-                                            };
-                                            return_type = Some(p_type);
-                                        }
-                                        _ => {}
-                                    }
-                                }
-                                decls.push(ToolDecl { name, params, return_type });
-                            }
-                        }
-                        tools = Some(decls);
-                    }
-                    Rule::invariant_block => {
-                        if invariants.is_some() {
-                            return Err(ParserError::DuplicateBlock("invariant".to_string()));
-                        }
-                        let mut exprs = Vec::new();
-                        for expr_pair in inner.into_inner() {
-                            if expr_pair.as_rule() == Rule::expr {
-                                exprs.push(parse_expr(expr_pair)?);
-                            }
-                        }
-                        invariants = Some(exprs);
-                    }
-                    Rule::strategy_block => {
-                        if strategy.is_some() {
-                            return Err(ParserError::DuplicateBlock("strategy".to_string()));
-                        }
-                        let string_pair = inner.into_inner().next().unwrap();
-                        strategy = Some(parse_string_literal(string_pair)?);
-                    }
-                    Rule::until_block => {
-                        if until.is_some() {
-                            return Err(ParserError::DuplicateBlock("until".to_string()));
-                        }
-                        let expr_pair = inner.into_inner().next().unwrap();
-                        until = Some(parse_expr(expr_pair)?);
-                    }
-                    Rule::fallback_block => {
-                        if fallback.is_some() {
-                            return Err(ParserError::DuplicateBlock("fallback".to_string()));
-                        }
-                        let string_pair = inner.into_inner().next().unwrap();
-                        fallback = Some(parse_string_literal(string_pair)?);
-                    }
-                    _ => unreachable!(),
+    // loop_block is silent, so block rules appear directly as children of file
+    for block in file_pair.into_inner() {
+        match block.as_rule() {
+            Rule::goal_block => {
+                if goal.is_some() {
+                    return Err(ParseError::DuplicateBlock("Goal".into()));
                 }
+                let text = block.into_inner().next().unwrap().as_str().trim().to_string();
+                goal = Some(GoalBlock { text });
             }
+
+            Rule::memory_block => {
+                if memory.is_some() {
+                    return Err(ParseError::DuplicateBlock("Memory".into()));
+                }
+                let mut fields = HashMap::new();
+                for field in block.into_inner() {
+                    if field.as_rule() == Rule::memory_field {
+                        let mut parts = field.into_inner();
+                        let key = parts.next().unwrap().as_str().to_string();
+                        let val_pair = parts.next().unwrap();
+                        let val = parse_memory_value(val_pair)?;
+                        fields.insert(key, val);
+                    }
+                }
+                memory = Some(MemoryBlock { fields });
+            }
+
+            Rule::discovery_block => {
+                if discovery.is_some() {
+                    return Err(ParseError::DuplicateBlock("Discovery".into()));
+                }
+                let mut scan = Vec::new();
+                let mut find = Vec::new();
+                // discovery_item is silent — scan_field/find_field appear directly
+                for child in block.into_inner() {
+                    match child.as_rule() {
+                        Rule::scan_field => {
+                            scan = parse_string_array(child.into_inner().next().unwrap());
+                        }
+                        Rule::find_field => {
+                            find = parse_string_array(child.into_inner().next().unwrap());
+                        }
+                        _ => {}
+                    }
+                }
+                discovery = Some(DiscoveryBlock { scan, find });
+            }
+
+            Rule::planning_block => {
+                if planning.is_some() {
+                    return Err(ParseError::DuplicateBlock("Planning".into()));
+                }
+                let mut steps = Vec::new();
+                let mut max_iterations: u32 = 5;
+                // planning_item is silent — steps_field/max_iterations_field appear directly
+                for child in block.into_inner() {
+                    match child.as_rule() {
+                        Rule::steps_field => {
+                            steps = parse_string_array(child.into_inner().next().unwrap());
+                        }
+                        Rule::max_iterations_field => {
+                            let n = child.into_inner().next().unwrap().as_str();
+                            max_iterations = n.parse().map_err(|_| ParseError::InvalidInteger(n.to_string()))?;
+                        }
+                        _ => {}
+                    }
+                }
+                planning = Some(PlanningBlock { steps, max_iterations });
+            }
+
+            Rule::execution_block => {
+                if execution.is_some() {
+                    return Err(ParseError::DuplicateBlock("Execution".into()));
+                }
+                let mut tools = Vec::new();
+                let mut strategy = String::new();
+                // execution_item is silent — tools_field/strategy_field appear directly
+                for child in block.into_inner() {
+                    match child.as_rule() {
+                        Rule::tools_field => {
+                            for decl in child.into_inner() {
+                                if decl.as_rule() == Rule::tool_decl {
+                                    tools.push(parse_tool_decl(decl)?);
+                                }
+                            }
+                        }
+                        Rule::strategy_field => {
+                            strategy = parse_string_literal(child.into_inner().next().unwrap());
+                        }
+                        _ => {}
+                    }
+                }
+                execution = Some(ExecutionBlock { tools, strategy });
+            }
+
+            Rule::verification_block => {
+                if verification.is_some() {
+                    return Err(ParseError::DuplicateBlock("Verification".into()));
+                }
+                let mut checks = Vec::new();
+                let mut on_fail = OnFail::Retry;
+                let mut max_retries: u32 = 3;
+                // verification_item is silent
+                for child in block.into_inner() {
+                    match child.as_rule() {
+                        Rule::checks_field => {
+                            checks = parse_string_array(child.into_inner().next().unwrap());
+                        }
+                        Rule::on_fail_field => {
+                            let v = child.into_inner().next().unwrap().as_str();
+                            on_fail = if v == "complete" { OnFail::Complete } else { OnFail::Retry };
+                        }
+                        Rule::max_retries_field => {
+                            let n = child.into_inner().next().unwrap().as_str();
+                            max_retries = n.parse().map_err(|_| ParseError::InvalidInteger(n.to_string()))?;
+                        }
+                        _ => {}
+                    }
+                }
+                verification = Some(VerificationBlock { checks, on_fail, max_retries });
+            }
+
             Rule::EOI => {}
-            _ => unreachable!(),
+            _ => {}
         }
     }
 
-    Ok(LoopAst {
-        task: task.ok_or_else(|| ParserError::MissingBlock("task".to_string()))?,
-        state: state.unwrap_or_default(),
-        tools: tools.unwrap_or_default(),
-        invariants: invariants.unwrap_or_default(),
-        strategy: strategy.ok_or_else(|| ParserError::MissingBlock("strategy".to_string()))?,
-        until: until.ok_or_else(|| ParserError::MissingBlock("until".to_string()))?,
-        fallback: fallback.ok_or_else(|| ParserError::MissingBlock("fallback".to_string()))?,
+    Ok(LoopFile {
+        goal: goal.unwrap_or(GoalBlock { text: String::new() }),
+        memory,
+        discovery: discovery.unwrap_or(DiscoveryBlock { scan: vec![], find: vec![] }),
+        planning: planning.unwrap_or(PlanningBlock { steps: vec![], max_iterations: 5 }),
+        execution: execution.unwrap_or(ExecutionBlock { tools: vec![], strategy: String::new() }),
+        verification: verification.unwrap_or(VerificationBlock {
+            checks: vec![],
+            on_fail: OnFail::Retry,
+            max_retries: 3,
+        }),
     })
 }
 
-fn parse_string_literal(pair: pest::iterators::Pair<Rule>) -> Result<String, ParserError> {
-    let inner = pair.into_inner().next().unwrap();
-    let raw = inner.as_str();
-    // basic unescaping could be added if needed, for now raw is fine
-    Ok(raw.to_string())
+fn parse_string_literal(pair: pest::iterators::Pair<Rule>) -> String {
+    pair.into_inner().next().unwrap().as_str().to_string()
 }
 
-fn parse_expr(pair: pest::iterators::Pair<Rule>) -> Result<Expr, ParserError> {
-    let mut inner = pair.into_inner();
-    let mut primary_expr = parse_primary(inner.next().unwrap())?;
-
-    while let Some(op_pair) = inner.next() {
-        let op = match op_pair.as_str() {
-            "==" => BinOpKind::Eq,
-            "!=" => BinOpKind::Ne,
-            "<=" => BinOpKind::Le,
-            ">=" => BinOpKind::Ge,
-            "<" => BinOpKind::Lt,
-            ">" => BinOpKind::Gt,
-            "&&" => BinOpKind::And,
-            "||" => BinOpKind::Or,
-            _ => unreachable!(),
-        };
-        let rhs_pair = inner.next().unwrap();
-        let rhs = parse_primary(rhs_pair)?;
-        primary_expr = Expr::BinOp {
-            lhs: Box::new(primary_expr),
-            op,
-            rhs: Box::new(rhs),
-        };
-    }
-
-    Ok(primary_expr)
+fn parse_string_array(pair: pest::iterators::Pair<Rule>) -> Vec<String> {
+    pair.into_inner()
+        .filter(|p| p.as_rule() == Rule::string)
+        .map(parse_string_literal)
+        .collect()
 }
 
-fn parse_primary(pair: pest::iterators::Pair<Rule>) -> Result<Expr, ParserError> {
+fn parse_memory_value(pair: pest::iterators::Pair<Rule>) -> Result<MemoryValue, ParseError> {
     let inner = pair.into_inner().next().unwrap();
     match inner.as_rule() {
-        Rule::boolean => Ok(Expr::Literal(Value::Boolean(inner.as_str() == "true"))),
-        Rule::integer => Ok(Expr::Literal(Value::Integer(inner.as_str().parse().unwrap()))),
-        Rule::string => Ok(Expr::Literal(Value::String(parse_string_literal(inner)?))),
-        Rule::state_var => {
-            let var_name = inner.into_inner().next().unwrap().as_str().to_string();
-            Ok(Expr::StateVar(var_name))
+        Rule::string => Ok(MemoryValue::String(parse_string_literal(inner))),
+        Rule::integer => {
+            let n = inner.as_str();
+            Ok(MemoryValue::Integer(n.parse().map_err(|_| ParseError::InvalidInteger(n.to_string()))?))
         }
-        Rule::tool_call => {
-            let mut parts = inner.into_inner();
-            let name = parts.next().unwrap().as_str().to_string();
-            let mut args = Vec::new();
-            for arg_pair in parts {
-                args.push(parse_expr(arg_pair)?);
-            }
-            Ok(Expr::ToolCall { name, args })
-        }
-        Rule::expr => parse_expr(inner),
+        Rule::boolean => Ok(MemoryValue::Boolean(inner.as_str() == "true")),
+        Rule::string_array => Ok(MemoryValue::StringArray(parse_string_array(inner))),
         _ => unreachable!(),
     }
 }
 
+fn parse_tool_decl(pair: pest::iterators::Pair<Rule>) -> Result<ToolDecl, ParseError> {
+    let mut parts = pair.into_inner();
+    let name = parts.next().unwrap().as_str().to_string();
+    let mut params = Vec::new();
+    let mut return_type = None;
+
+    for part in parts {
+        match part.as_rule() {
+            Rule::tool_param => {
+                let mut pp = part.into_inner();
+                let p_name = pp.next().unwrap().as_str().to_string();
+                let p_type = parse_param_type(pp.next().unwrap().as_str());
+                params.push(ToolParam { name: p_name, param_type: p_type });
+            }
+            Rule::param_type => {
+                return_type = Some(parse_param_type(part.as_str()));
+            }
+            _ => {}
+        }
+    }
+
+    Ok(ToolDecl { name, params, return_type })
+}
+
+fn parse_param_type(s: &str) -> ParamType {
+    match s {
+        "int"  => ParamType::Int,
+        "bool" => ParamType::Bool,
+        _      => ParamType::String,
+    }
+}
+
+// ─── Tests ───────────────────────────────────────────────────────────────────
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parser::checker::check_ast;
+    use crate::parser::checker::check_loop_file;
+
+    const VALID: &str = r#"
+        Goal [
+            Build a REST API with authentication
+        ]
+
+        Memory {
+            project_path: "./api"
+            stack: ["Rust", "Axum"]
+        }
+
+        Discovery {
+            scan: ["src/**/*.rs", "Cargo.toml"]
+            find: [
+                "What routes already exist?"
+                "Is auth middleware present?"
+            ]
+        }
+
+        Planning {
+            steps: [
+                "Read existing source files"
+                "Add auth middleware"
+                "Write tests"
+            ]
+            max_iterations: 4
+        }
+
+        Execution {
+            tools: [
+                read_file(path: string) -> string
+                write_file(path: string, content: string) -> bool
+                run_command(cmd: string) -> string
+            ]
+            strategy: "Execute steps in order, use tools to read then write."
+        }
+
+        Verification {
+            checks: [
+                "cargo test passes"
+                "POST /auth/login returns 200"
+            ]
+            on_fail: retry
+            max_retries: 3
+        }
+    "#;
 
     #[test]
-    fn test_parse_and_check_valid() {
-        let content = r#"
-            task {
-                "Solve the bug"
-            }
-            state {
-                counter: 0,
-                filepath: "src/main.rs",
-                is_done: false
-            }
-            tools {
-                tool read_file(path: string) -> string
-                tool write_file(path: string, content: string) -> bool
-            }
-            invariant {
-                state.counter < 10
-            }
-            strategy {
-                "Read and write."
-            }
-            until {
-                state.is_done == true
-            }
-            fallback {
-                "Failed."
-            }
-        "#;
-        let ast = parse_loop_file(content).unwrap();
-        assert_eq!(ast.task, "Solve the bug");
-        assert_eq!(ast.strategy, "Read and write.");
-        assert_eq!(ast.fallback, "Failed.");
-        assert!(ast.state.contains_key("counter"));
-        assert!(ast.state.contains_key("filepath"));
-        assert!(ast.state.contains_key("is_done"));
-
-        let check_res = check_ast(&ast);
-        assert!(check_res.is_ok(), "Type check failed: {:?}", check_res);
+    fn test_parse_valid() {
+        let lf = parse_loop_file(VALID).expect("parse failed");
+        assert!(lf.goal.text.contains("REST API"));
+        assert_eq!(lf.planning.steps.len(), 3);
+        assert_eq!(lf.planning.max_iterations, 4);
+        assert_eq!(lf.execution.tools.len(), 3);
+        assert_eq!(lf.verification.max_retries, 3);
+        assert_eq!(lf.verification.on_fail, OnFail::Retry);
+        assert!(check_loop_file(&lf).is_ok());
     }
 
     #[test]
-    fn test_check_invalid_var() {
+    fn test_memory_optional() {
         let content = r#"
-            task { "Fix" }
-            state { counter: 0 }
-            tools {}
-            invariant { state.nonexistent < 10 }
-            strategy { "Fix" }
-            until { state.counter == 0 }
-            fallback { "Fail" }
+            Goal [ Fix the bug ]
+            Discovery { find: ["What broke?"] }
+            Planning { steps: ["Investigate"] }
+            Execution {
+                tools: [ read_file(path: string) -> string ]
+                strategy: "read files"
+            }
+            Verification { checks: ["tests pass"] on_fail: retry }
         "#;
-        let ast = parse_loop_file(content).unwrap();
-        let check_res = check_ast(&ast);
-        assert!(check_res.is_err());
-        assert!(check_res.unwrap_err().to_string().contains("Uninitialized state variable"));
+        let lf = parse_loop_file(content).expect("parse failed");
+        assert!(lf.memory.is_none());
+        assert_eq!(lf.discovery.find.len(), 1);
+        assert!(check_loop_file(&lf).is_ok());
     }
 
     #[test]
-    fn test_check_non_bool_until() {
+    fn test_duplicate_block_error() {
         let content = r#"
-            task { "Fix" }
-            state { counter: 0 }
-            tools {}
-            invariant {}
-            strategy { "Fix" }
-            until { state.counter }
-            fallback { "Fail" }
+            Goal [ First ]
+            Goal [ Second ]
+            Discovery { find: ["x"] }
+            Planning { steps: ["x"] }
+            Execution { tools: [ read_file(path: string) -> string ] strategy: "s" }
+            Verification { checks: ["c"] on_fail: retry }
         "#;
-        let ast = parse_loop_file(content).unwrap();
-        let check_res = check_ast(&ast);
-        assert!(check_res.is_err());
-        assert!(check_res.unwrap_err().to_string().contains("Assertion must yield a boolean value"));
+        assert!(parse_loop_file(content).is_err());
+    }
+
+    #[test]
+    fn test_on_fail_complete() {
+        let content = r#"
+            Goal [ Ship it ]
+            Discovery { find: ["check status"] }
+            Planning { steps: ["deploy"] max_iterations: 1 }
+            Execution {
+                tools: [ run_command(cmd: string) -> string ]
+                strategy: "run deploy script"
+            }
+            Verification { checks: ["service is up"] on_fail: complete max_retries: 0 }
+        "#;
+        let lf = parse_loop_file(content).expect("parse failed");
+        assert_eq!(lf.verification.on_fail, OnFail::Complete);
+        assert_eq!(lf.verification.max_retries, 0);
     }
 }
