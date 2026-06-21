@@ -20,20 +20,15 @@ tools {
 }
 
 invariant {
-    state.failing_tests == 0,
-    state.has_compilation_error == false
+    (state.failing_tests == 0) && (state.has_compilation_error == false)
 }
 
 strategy {
-    "1. Read OVERVIEW.md and LOOP_ENGINEERING.md to establish complete context."
-    "2. Execute run_cargo_test to verify compiler and runtime integrity."
-    "3. Use the Maker/Checker split to verify all DSL blocks compile properly."
-    "4. Refine the language parser, isolated sandbox, and state ledger to support all six primitives."
-    "5. Recompile the VS Code extension using compile_extension to verify the brain.png icon and TextMate syntax highlighting work seamlessly."
+    "1. Read OVERVIEW.md and LOOP_ENGINEERING.md to establish complete context. 2. Execute run_cargo_test to verify compiler and runtime integrity. 3. Use the Maker/Checker split to verify all DSL blocks compile properly. 4. Refine the language parser, isolated sandbox, and state ledger to support all six primitives. 5. Recompile the VS Code extension using compile_extension to verify the brain.png icon and TextMate syntax highlighting work seamlessly."
 }
 
 until {
-    state.primitives_implemented == 6 && state.loops_active == 4 && state.vscode_icon_configured == true && state.syntax_colors_updated == true
+    ((state.primitives_implemented == 6) && (state.loops_active == 4)) && ((state.vscode_icon_configured == true) && (state.syntax_colors_updated == true))
 }
 
 fallback {

@@ -1,0 +1,35 @@
+task {
+    "Develop and integrate a Rust-backed Language Server Protocol (LSP) for the Loop language to provide real-time syntax completions, compiler errors, and warning diagnostics inside VS Code when editing incomplete .loop files."
+}
+
+state {
+    syntax_errors: 0,
+    warnings_found: 0,
+    completions_delivered: 0,
+    is_lsp_connected: true,
+    has_rust_panic: false,
+    diagnostics_sent: false
+}
+
+tools {
+    tool parse_pest_grammar(input_file: string) -> int
+    tool generate_diagnostics(input_file: string) -> string
+    tool fetch_completions(cursor_offset: int) -> string
+    tool send_lsp_notification(method: string, payload: string) -> bool
+}
+
+invariant {
+    (state.is_lsp_connected == true) && (state.has_rust_panic == false)
+}
+
+strategy {
+    "1. Run the Pest parser on the active .loop file using the Rust parsing engine to check grammar rules. 2. If parsing fails, extract the syntax error line and column info from the Pest error details. 3. Compile warnings for unused variables or empty blocks in the state ledger schema. 4. Send a publishDiagnostics notification containing the errors and warnings back to the VS Code client. 5. When the user requests autocomplete, compute matching keywords or tool definitions based on cursor offset and return completions."
+}
+
+until {
+    (state.diagnostics_sent == true) && (state.syntax_errors == 0)
+}
+
+fallback {
+    "Capture the compiler parse diagnostics, convert them into editor warnings, and prompt the LLM to write correct syntactically complete Loop blocks."
+}
