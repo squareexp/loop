@@ -39,6 +39,10 @@
           "match": "\\bMemory\\b"
         },
         {
+          "name": "entity.name.section.task.loop",
+          "match": "\\bTask\\b"
+        },
+        {
           "name": "entity.name.section.discovery.loop",
           "match": "\\bDiscovery\\b"
         },
@@ -57,13 +61,14 @@
       ]
     },
     "goal_content": {
-      "begin": "\\bGoal\\s*\\[",
+      "comment": "Goal [ ... ] — the text inside is an unquoted string",
+      "begin": "(?<=\\bGoal\\s*)\\[",
       "end": "\\]",
       "beginCaptures": {
-        "0": { "name": "entity.name.section.goal.loop" }
+        "0": { "name": "punctuation.section.goal.begin.loop" }
       },
       "endCaptures": {
-        "0": { "name": "entity.name.section.goal.loop" }
+        "0": { "name": "punctuation.section.goal.end.loop" }
       },
       "name": "string.unquoted.goal.loop"
     },

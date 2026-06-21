@@ -1,10 +1,10 @@
 {
-  "Full Loop File": {
-    "prefix": "loop",
+  "Complete Loop File": {
+    "prefix": ["loop", "lf"],
     "scope": "loop",
     "body": [
       "Goal [",
-      "    ${1:Describe what you want to achieve in natural language}",
+      "    ${1:Describe your goal in plain language. What does done look like?}",
       "]",
       "",
       "Memory {",
@@ -12,21 +12,26 @@
       "    notes: []",
       "}",
       "",
+      "Task {",
+      "    \"${3:First concrete task}\"",
+      "    \"${4:Second concrete task}\"",
+      "}",
+      "",
       "Discovery {",
-      "    scan: [\"${3:**/*.ts}\"]",
+      "    scan: [\"${5:**/*}\"]",
       "    find: [",
-      "        \"${4:What already exists?}\"",
-      "        \"${5:What is missing?}\"",
+      "        \"${6:What already exists?}\"",
+      "        \"${7:What is missing?}\"",
       "    ]",
       "}",
       "",
       "Planning {",
       "    steps: [",
-      "        \"${6:First step}\"",
-      "        \"${7:Second step}\"",
-      "        \"${8:Third step}\"",
+      "        \"${8:Run discovery and record findings}\"",
+      "        \"${9:Implement the first task}\"",
+      "        \"${10:Verify and complete}\"",
       "    ]",
-      "    max_iterations: ${9:5}",
+      "    max_iterations: ${11:5}",
       "}",
       "",
       "Execution {",
@@ -34,99 +39,130 @@
       "        read_file(path: string) -> string",
       "        write_file(path: string, content: string) -> bool",
       "        run_command(cmd: string) -> string",
+      "        list_dir(path: string) -> string",
       "    ]",
-      "    strategy: \"${10:Execute steps sequentially. Verify after each tool call.}\"",
+      "    strategy: \"${12:Execute steps in order. Read before writing. Verify after each step.}\"",
       "}",
       "",
       "Verification {",
       "    checks: [",
-      "        \"${11:First success condition}\"",
-      "        \"${12:Second success condition}\"",
+      "        \"${13:First success condition}\"",
+      "        \"${14:Second success condition}\"",
       "    ]",
       "    on_fail: retry",
-      "    max_retries: ${13:3}",
+      "    max_retries: ${15:3}",
       "}"
     ],
-    "description": "Create a complete Loop Engineering file"
+    "description": "Create a complete Loop Engineering file with all seven blocks"
   },
   "Goal Block": {
-    "prefix": "goal",
+    "prefix": ["goal", "go", "Go"],
     "scope": "loop",
     "body": [
       "Goal [",
-      "    ${1:Describe the goal}",
+      "    ${1:Describe what you want to achieve}",
       "]"
     ],
-    "description": "Add a Goal block"
+    "description": "Goal [ ] — plain language goal using square brackets"
   },
   "Memory Block": {
-    "prefix": "memory",
+    "prefix": ["memory", "me", "Me"],
     "scope": "loop",
     "body": [
       "Memory {",
       "    ${1:key}: \"${2:value}\"",
       "}"
     ],
-    "description": "Add a Memory block"
+    "description": "Memory { } — persistent agent state across sessions"
+  },
+  "Task Block": {
+    "prefix": ["task", "ta", "Ta"],
+    "scope": "loop",
+    "body": [
+      "Task {",
+      "    \"${1:First concrete task}\"",
+      "    \"${2:Second concrete task}\"",
+      "    \"${3:Third concrete task}\"",
+      "}"
+    ],
+    "description": "Task { } — specific implementation items"
   },
   "Discovery Block": {
-    "prefix": "discovery",
+    "prefix": ["discovery", "di", "Di"],
     "scope": "loop",
     "body": [
       "Discovery {",
-      "    scan: [\"${1:**/*.ts}\"]",
+      "    scan: [\"${1:**/*}\"]",
       "    find: [",
-      "        \"${2:What needs doing?}\"",
+      "        \"${2:What already exists?}\"",
+      "        \"${3:What is missing?}\"",
       "    ]",
       "}"
     ],
-    "description": "Add a Discovery block"
+    "description": "Discovery { } — scan files and answer questions before coding"
   },
   "Planning Block": {
-    "prefix": "planning",
+    "prefix": ["planning", "pl", "Pl"],
     "scope": "loop",
     "body": [
       "Planning {",
       "    steps: [",
       "        \"${1:First step}\"",
       "        \"${2:Second step}\"",
+      "        \"${3:Third step}\"",
       "    ]",
-      "    max_iterations: ${3:5}",
+      "    max_iterations: ${4:5}",
       "}"
     ],
-    "description": "Add a Planning block"
+    "description": "Planning { } — ordered steps with an iteration budget"
   },
   "Execution Block": {
-    "prefix": "execution",
+    "prefix": ["execution", "ex", "Ex"],
     "scope": "loop",
     "body": [
       "Execution {",
       "    tools: [",
-      "        ${1:read_file}(${2:path}: string) -> string",
+      "        read_file(path: string) -> string",
+      "        write_file(path: string, content: string) -> bool",
+      "        run_command(cmd: string) -> string",
+      "        ${1:list_dir(path: string) -> string}",
       "    ]",
-      "    strategy: \"${3:Execute steps in order}\"",
+      "    strategy: \"${2:Execute steps in order. Read before writing.}\"",
       "}"
     ],
-    "description": "Add an Execution block"
+    "description": "Execution { } — available tools and execution strategy"
   },
   "Verification Block": {
-    "prefix": "verification",
+    "prefix": ["verification", "ve", "Ve"],
     "scope": "loop",
     "body": [
       "Verification {",
       "    checks: [",
-      "        \"${1:Success condition}\"",
+      "        \"${1:First success condition}\"",
+      "        \"${2:Second success condition}\"",
       "    ]",
-      "    on_fail: ${2|retry,complete|}",
-      "    max_retries: ${3:3}",
+      "    on_fail: ${3|retry,complete|}",
+      "    max_retries: ${4:3}",
       "}"
     ],
-    "description": "Add a Verification block"
+    "description": "Verification { } — success criteria with retry behavior"
   },
   "Tool Declaration": {
-    "prefix": "tool",
+    "prefix": ["tool", "to"],
     "scope": "loop",
     "body": "${1:tool_name}(${2:param}: ${3|string,int,bool|}) -> ${4|string,bool,int|}",
-    "description": "Declare an agent tool"
+    "description": "Declare a tool: name(param: type) -> return_type"
+  },
+  "Memory Field": {
+    "prefix": "field",
+    "scope": "loop",
+    "body": "${1:key}: \"${2:value}\"",
+    "description": "Memory field: key: \"value\""
+  },
+  "Task Item": {
+    "prefix": "item",
+    "scope": "loop",
+    "body": "\"${1:Task description}\"",
+    "description": "A single Task item string"
   }
 }

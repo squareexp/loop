@@ -1,10 +1,15 @@
 {
   "name": "loopagent",
   "displayName": "Loop Engineering Language",
-  "description": "Language support for .loop files — structured AI agent task files with Goal, Memory, Discovery, Planning, Execution, and Verification blocks.",
+  "description": "Syntax highlighting, completions, and snippets for .loop files — structured AI agent task specifications.",
   "version": "0.2.0",
   "publisher": "squareexp",
   "icon": "brain.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/squareexp/loop"
+  },
+  "keywords": ["loop", "ai", "agent", "dsl", "task", "engineering"],
   "engines": {
     "vscode": "^1.60.0"
   },

@@ -90,6 +90,9 @@ pub fn format_check_output(lf: &LoopFile) -> String {
     // Memory (optional)
     out.push_str(&block_status("Memory", lf.memory.is_some(), None));
 
+    // Task (optional)
+    out.push_str(&block_status("Task", lf.task.is_some(), None));
+
     // Discovery
     let disc_err = report.errors.iter().find(|e| e.contains("Discovery"));
     let disc_present = !lf.discovery.scan.is_empty() || !lf.discovery.find.is_empty();

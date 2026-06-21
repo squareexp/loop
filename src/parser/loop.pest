@@ -11,10 +11,16 @@ boolean    = @{ "true" | "false" }
 ident      = @{ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")* }
 
 // ─── Goal Block ──────────────────────────────────────────────────────────────
-// Natural language text — no quotes needed between [ ]
+// Goal MUST use [ ] — using { } or ( ) is a syntax error.
 
 goal_text  = @{ (!"]" ~ ANY)* }
 goal_block = { "Goal" ~ "[" ~ goal_text ~ "]" }
+
+// ─── Task Block ───────────────────────────────────────────────────────────────
+// Task MUST use { } — using [ ] or ( ) is a syntax error.
+// Each item is a quoted string.
+
+task_block = { "Task" ~ "{" ~ (string ~ ","?)* ~ "}" }
 
 // ─── String Array ─────────────────────────────────────────────────────────────
 
@@ -66,6 +72,7 @@ verification_block  = { "Verification" ~ "{" ~ verification_item* ~ "}" }
 loop_block = _{
     goal_block
   | memory_block
+  | task_block
   | discovery_block
   | planning_block
   | execution_block

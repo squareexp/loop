@@ -82,12 +82,20 @@ pub struct VerificationBlock {
     pub max_retries: u32,
 }
 
+// ─── Task Block ──────────────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TaskBlock {
+    pub items: Vec<String>,
+}
+
 // ─── Root AST Node ───────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LoopFile {
     pub goal: GoalBlock,
     pub memory: Option<MemoryBlock>,
+    pub task: Option<TaskBlock>,
     pub discovery: DiscoveryBlock,
     pub planning: PlanningBlock,
     pub execution: ExecutionBlock,
