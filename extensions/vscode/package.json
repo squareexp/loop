@@ -4,6 +4,7 @@
   "description": "Support Extension for loop agentic language",
   "version": "0.1.0",
   "publisher": "squareexp",
+  "icon": "brain.svg",
   "engines": {
     "vscode": "^1.60.0"
   },
