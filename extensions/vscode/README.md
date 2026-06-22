@@ -125,7 +125,7 @@ Execution ( ... )            // ERROR: Execution requires { } not ( )
 The extension pairs with the `loop` CLI for validation and execution:
 
 ```sh
-npm install -g @squareexp/loop   # install
+npm install -g @squareexperience/loop   # install
 
 loop init                         # create .loop/skills, Memory/, Goal.loop
 loop check Goal.loop              # validate the file — shows per-block status
@@ -135,7 +135,7 @@ loop status                       # show current state and failure history
 loop inspect Goal.loop            # print the parsed AST
 ```
 
-Install: [npmjs.com/package/@squareexp/loop](https://www.npmjs.com/package/@squareexp/loop)
+Install: [npmjs.com/package/@squareexperience/loop](https://www.npmjs.com/package/@squareexperience/loop)
 
 ---
 

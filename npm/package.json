@@ -1,5 +1,5 @@
 {
-  "name": "@squareexp/loop",
+  "name": "@squareexperience/loop",
   "version": "0.2.0",
   "description": "Loop Engineering Language CLI — structured task files for AI agents",
   "keywords": [
@@ -25,7 +25,7 @@
   },
   "license": "MIT",
   "bin": {
-    "loop": "./bin/loop.js"
+    "loop": "bin/loop.js"
   },
   "scripts": {
     "postinstall": "node install.js"
